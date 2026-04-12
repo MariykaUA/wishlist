@@ -21,21 +21,31 @@ export interface WishlistItem {
   url: string
 }
 
+// Module-level cache — survives component unmount/remount
+const cachedItems = ref<WishlistItem[]>([])
+const initialised = ref(false)
+
 export function useWishlist() {
   const { $db, $storage } = useNuxtApp()
-  const items = ref<WishlistItem[]>([])
-  const loading = ref(true)
+
+  // Only show loading spinner on very first load
+  const loading = computed(() => !initialised.value)
 
   onMounted(() => {
+    if (initialised.value) return // already listening
+
     const col = collection($db as any, 'wishlist')
     const q = query(col, orderBy('createdAt', 'desc'))
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      items.value = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as WishlistItem))
-      loading.value = false
+      cachedItems.value = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as WishlistItem))
+      initialised.value = true
     })
 
-    onUnmounted(unsubscribe)
+    // Keep listener alive for the session
+    if (import.meta.client) {
+      window.addEventListener('beforeunload', unsubscribe)
+    }
   })
 
   async function uploadImage(file: File): Promise<string> {
@@ -60,5 +70,5 @@ export function useWishlist() {
     await deleteDoc(doc($db as any, 'wishlist', id))
   }
 
-  return { items, loading, addItem, removeItem }
+  return { items: cachedItems, loading, addItem, removeItem }
 }
