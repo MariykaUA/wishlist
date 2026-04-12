@@ -8,18 +8,21 @@ import {
   query,
   orderBy,
 } from 'firebase/firestore'
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 
 export interface WishlistItem {
   id: string
   name: string
-  price: number
+  price: string
+  currency: string
+  description: string
   image: string
   store: string
   url: string
 }
 
 export function useWishlist() {
-  const { $db } = useNuxtApp()
+  const { $db, $storage } = useNuxtApp()
   const items = ref<WishlistItem[]>([])
   const loading = ref(true)
 
@@ -35,9 +38,22 @@ export function useWishlist() {
     onUnmounted(unsubscribe)
   })
 
-  async function addItem(item: Omit<WishlistItem, 'id'>) {
+  async function uploadImage(file: File): Promise<string> {
+    const path = `wishlist/${Date.now()}_${file.name}`
+    const ref = storageRef($storage as any, path)
+    await uploadBytes(ref, file)
+    return getDownloadURL(ref)
+  }
+
+  async function addItem(item: Omit<WishlistItem, 'id'>, imageFile?: File) {
     const col = collection($db as any, 'wishlist')
-    await addDoc(col, { ...item, createdAt: serverTimestamp() })
+    let imageUrl = item.image
+
+    if (imageFile) {
+      imageUrl = await uploadImage(imageFile)
+    }
+
+    await addDoc(col, { ...item, image: imageUrl, createdAt: serverTimestamp() })
   }
 
   async function removeItem(id: string) {
