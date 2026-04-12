@@ -21,31 +21,36 @@ export interface WishlistItem {
   url: string
 }
 
-// Module-level cache — survives component unmount/remount
+// Module-level — persists across SPA navigations, resets on hard refresh
 const cachedItems = ref<WishlistItem[]>([])
-const initialised = ref(false)
+const isListening = ref(false)
 
 export function useWishlist() {
   const { $db, $storage } = useNuxtApp()
 
-  // Only show loading spinner on very first load
-  const loading = computed(() => !initialised.value)
+  const loading = computed(() => cachedItems.value.length === 0 && !isListening.value)
 
   onMounted(() => {
-    if (initialised.value) return // already listening
+    if (isListening.value) return
 
     const col = collection($db as any, 'wishlist')
     const q = query(col, orderBy('createdAt', 'desc'))
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      cachedItems.value = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as WishlistItem))
-      initialised.value = true
-    })
+    isListening.value = true
 
-    // Keep listener alive for the session
-    if (import.meta.client) {
-      window.addEventListener('beforeunload', unsubscribe)
-    }
+    onSnapshot(
+      q,
+      (snapshot) => {
+        // Keep any temp (optimistic) items, replace the rest with real data
+        const tempItems = cachedItems.value.filter((i) => i.id.startsWith('temp_'))
+        const realItems = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as WishlistItem))
+        cachedItems.value = [...tempItems, ...realItems]
+      },
+      () => {
+        // On error reset so listener retries on next mount
+        isListening.value = false
+      },
+    )
   })
 
   async function uploadImage(file: File): Promise<string> {
@@ -58,28 +63,23 @@ export function useWishlist() {
   async function addItem(item: Omit<WishlistItem, 'id'>, imageFile?: File) {
     const col = collection($db as any, 'wishlist')
 
-    // Show item immediately with local preview
     const tempId = `temp_${Date.now()}`
-    const tempItem: WishlistItem = {
+    cachedItems.value.unshift({
       ...item,
       id: tempId,
       image: imageFile ? URL.createObjectURL(imageFile) : item.image,
-    }
-    cachedItems.value.unshift(tempItem)
+    })
 
-    // Upload image + save to Firestore in background
     let imageUrl = item.image
-    if (imageFile) {
-      imageUrl = await uploadImage(imageFile)
-    }
+    if (imageFile) imageUrl = await uploadImage(imageFile)
 
     await addDoc(col, { ...item, image: imageUrl, createdAt: serverTimestamp() })
-
-    // Remove temp item — real one comes in via onSnapshot
     cachedItems.value = cachedItems.value.filter((i) => i.id !== tempId)
   }
 
   async function removeItem(id: string) {
+    // Optimistic remove
+    cachedItems.value = cachedItems.value.filter((i) => i.id !== id)
     await deleteDoc(doc($db as any, 'wishlist', id))
   }
 
