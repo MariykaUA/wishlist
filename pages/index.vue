@@ -299,7 +299,7 @@ async function submitForm() {
 .form__preview {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .form__remove-img {
@@ -521,7 +521,7 @@ async function submitForm() {
 .card__image {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   transition: transform 0.3s ease;
 }
 
