@@ -31,8 +31,8 @@ async function submitForm() {
 <template>
   <div class="page">
     <header class="header">
-      <h1 class="header__title">✨ My Wishlist</h1>
-      <p class="header__subtitle">{{ items.length }} items</p>
+      <h1 class="header__title">Everything I dream of having one day</h1>
+      <p class="header__subtitle">{{ items.length }} items on the list</p>
       <button class="add-btn" @click="showForm = !showForm">
         {{ showForm ? 'Cancel' : '+ Add item' }}
       </button>
@@ -104,8 +104,8 @@ async function submitForm() {
 .page {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem 1.5rem 4rem;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  padding: 4rem 1.5rem 4rem;
+  font-family: 'Montserrat', system-ui, sans-serif;
 }
 
 /* ── Header ── */
@@ -115,32 +115,38 @@ async function submitForm() {
 }
 
 .header__title {
-  font-size: 2.5rem;
-  font-weight: 700;
+  font-family: 'Barrio', cursive;
+  font-size: 3.5rem;
+  font-weight: 400;
   color: #1a1a2e;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
+  line-height: 1.1;
 }
 
 .header__subtitle {
   font-size: 1rem;
   color: #888;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
 }
 
 .add-btn {
-  background: #6366f1;
+  font-family: 'Montserrat', system-ui, sans-serif;
+  background: linear-gradient(135deg, #f97316, #ec4899);
   color: #fff;
   border: none;
-  padding: 0.6rem 1.5rem;
-  border-radius: 8px;
+  padding: 0.65rem 1.75rem;
+  border-radius: 999px;
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s;
+  letter-spacing: 0.03em;
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .add-btn:hover {
-  background: #4f46e5;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(249, 115, 22, 0.45);
 }
 
 /* ── Form ── */
@@ -162,6 +168,7 @@ async function submitForm() {
 }
 
 .form__input {
+  font-family: 'Montserrat', system-ui, sans-serif;
   width: 100%;
   padding: 0.6rem 0.9rem;
   border: 1.5px solid #e2e8f0;
@@ -176,20 +183,23 @@ async function submitForm() {
 }
 
 .form__submit {
+  font-family: 'Montserrat', system-ui, sans-serif;
   align-self: flex-end;
-  background: #6366f1;
+  background: linear-gradient(135deg, #22c55e, #10b981);
   color: #fff;
   border: none;
   padding: 0.65rem 1.75rem;
-  border-radius: 8px;
+  border-radius: 999px;
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s;
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .form__submit:hover:not(:disabled) {
-  background: #4f46e5;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.45);
 }
 
 .form__submit:disabled {
@@ -312,20 +322,23 @@ async function submitForm() {
 }
 
 .btn {
+  font-family: 'Montserrat', system-ui, sans-serif;
   display: block;
   margin-top: auto;
-  padding: 0.6rem 1rem;
-  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  border-radius: 999px;
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 700;
   text-align: center;
   text-decoration: none;
-  background: #6366f1;
+  background: linear-gradient(135deg, #a855f7, #6366f1);
   color: #fff;
-  transition: background 0.2s ease;
+  box-shadow: 0 4px 14px rgba(168, 85, 247, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .btn:hover {
-  background: #4f46e5;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(168, 85, 247, 0.45);
 }
 </style>

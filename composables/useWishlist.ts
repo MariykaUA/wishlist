@@ -23,18 +23,20 @@ export function useWishlist() {
   const items = ref<WishlistItem[]>([])
   const loading = ref(true)
 
-  // Real-time listener
-  const col = collection($db as any, 'wishlist')
-  const q = query(col, orderBy('createdAt', 'desc'))
+  onMounted(() => {
+    const col = collection($db as any, 'wishlist')
+    const q = query(col, orderBy('createdAt', 'desc'))
 
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    items.value = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as WishlistItem))
-    loading.value = false
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      items.value = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as WishlistItem))
+      loading.value = false
+    })
+
+    onUnmounted(unsubscribe)
   })
 
-  onUnmounted(unsubscribe)
-
   async function addItem(item: Omit<WishlistItem, 'id'>) {
+    const col = collection($db as any, 'wishlist')
     await addDoc(col, { ...item, createdAt: serverTimestamp() })
   }
 
