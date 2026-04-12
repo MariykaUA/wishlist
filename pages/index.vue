@@ -135,8 +135,17 @@ async function submitForm() {
       </form>
     </Transition>
 
-    <!-- Loading -->
-    <div v-if="loading" class="state">Loading…</div>
+    <!-- Skeleton -->
+    <div v-if="loading" class="grid">
+      <div v-for="n in 6" :key="n" class="card skeleton">
+        <div class="skeleton__image" />
+        <div class="skeleton__body">
+          <div class="skeleton__line skeleton__line--title" />
+          <div class="skeleton__line skeleton__line--short" />
+          <div class="skeleton__line skeleton__line--btn" />
+        </div>
+      </div>
+    </div>
 
     <!-- Empty -->
     <div v-else-if="!items.length && !showForm" class="state">
@@ -444,6 +453,39 @@ async function submitForm() {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.75rem;
+}
+
+/* ── Skeleton ── */
+.skeleton { pointer-events: none; }
+
+.skeleton__image {
+  height: 200px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+.skeleton__body {
+  padding: 1.1rem 1.25rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.skeleton__line {
+  border-radius: 6px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+.skeleton__line--title { height: 14px; width: 70%; }
+.skeleton__line--short { height: 12px; width: 45%; }
+.skeleton__line--btn   { height: 30px; width: 100px; border-radius: 999px; margin-top: 0.25rem; }
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* ── Card ── */
