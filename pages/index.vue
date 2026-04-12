@@ -36,21 +36,23 @@ function resetForm() {
 
 async function submitForm() {
   if (!form.name || !form.price) return
-  saving.value = true
-  await addItem(
-    {
-      name: form.name,
-      price: form.price,
-      currency: form.currency,
-      description: form.description,
-      image: '',
-      store: form.store,
-      url: form.url,
-    },
-    imageFile.value ?? undefined,
-  )
+
+  const payload = {
+    name: form.name,
+    price: form.price,
+    currency: form.currency,
+    description: form.description,
+    image: '',
+    store: form.store,
+    url: form.url,
+  }
+  const file = imageFile.value ?? undefined
+
+  // Close form instantly — item appears in grid right away
   resetForm()
-  saving.value = false
+
+  // Finish upload + Firestore write in background
+  addItem(payload, file)
 }
 </script>
 

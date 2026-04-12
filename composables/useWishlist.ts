@@ -57,13 +57,26 @@ export function useWishlist() {
 
   async function addItem(item: Omit<WishlistItem, 'id'>, imageFile?: File) {
     const col = collection($db as any, 'wishlist')
-    let imageUrl = item.image
 
+    // Show item immediately with local preview
+    const tempId = `temp_${Date.now()}`
+    const tempItem: WishlistItem = {
+      ...item,
+      id: tempId,
+      image: imageFile ? URL.createObjectURL(imageFile) : item.image,
+    }
+    cachedItems.value.unshift(tempItem)
+
+    // Upload image + save to Firestore in background
+    let imageUrl = item.image
     if (imageFile) {
       imageUrl = await uploadImage(imageFile)
     }
 
     await addDoc(col, { ...item, image: imageUrl, createdAt: serverTimestamp() })
+
+    // Remove temp item — real one comes in via onSnapshot
+    cachedItems.value = cachedItems.value.filter((i) => i.id !== tempId)
   }
 
   async function removeItem(id: string) {
