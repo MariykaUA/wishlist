@@ -8,7 +8,6 @@ import {
   query,
   orderBy,
 } from 'firebase/firestore'
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 
 export interface WishlistItem {
   id: string
@@ -24,11 +23,41 @@ export interface WishlistItem {
 // Module-level — persists across SPA navigations, resets on hard refresh
 const cachedItems = ref<WishlistItem[]>([])
 const isListening = ref(false)
+const hasLoaded = ref(false)
+
+function compressImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      const MAX = 600
+      let { width, height } = img
+      if (width > MAX || height > MAX) {
+        if (width > height) {
+          height = Math.round((height * MAX) / width)
+          width = MAX
+        } else {
+          width = Math.round((width * MAX) / height)
+          height = MAX
+        }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+      URL.revokeObjectURL(url)
+      resolve(canvas.toDataURL('image/jpeg', 0.65))
+    }
+    img.onerror = reject
+    img.src = url
+  })
+}
 
 export function useWishlist() {
-  const { $db, $storage } = useNuxtApp()
+  const { $db } = useNuxtApp()
 
-  const loading = computed(() => cachedItems.value.length === 0 && !isListening.value)
+  // Show skeleton until the first Firestore snapshot arrives (or fails)
+  const loading = computed(() => !hasLoaded.value)
 
   onMounted(() => {
     if (isListening.value) return
@@ -38,27 +67,27 @@ export function useWishlist() {
 
     isListening.value = true
 
+    // Safety timeout — stop skeleton after 8 s even if Firebase is unreachable
+    const timeout = setTimeout(() => { hasLoaded.value = true }, 8000)
+
     onSnapshot(
       q,
       (snapshot) => {
+        clearTimeout(timeout)
+        hasLoaded.value = true
         // Keep any temp (optimistic) items, replace the rest with real data
         const tempItems = cachedItems.value.filter((i) => i.id.startsWith('temp_'))
         const realItems = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as WishlistItem))
         cachedItems.value = [...tempItems, ...realItems]
       },
       () => {
-        // On error reset so listener retries on next mount
+        // On error show empty state and allow retry on next mount
+        clearTimeout(timeout)
+        hasLoaded.value = true
         isListening.value = false
       },
     )
   })
-
-  async function uploadImage(file: File): Promise<string> {
-    const path = `wishlist/${Date.now()}_${file.name}`
-    const ref = storageRef($storage as any, path)
-    await uploadBytes(ref, file)
-    return getDownloadURL(ref)
-  }
 
   async function addItem(item: Omit<WishlistItem, 'id'>, imageFile?: File) {
     const col = collection($db as any, 'wishlist')
@@ -70,10 +99,10 @@ export function useWishlist() {
       image: imageFile ? URL.createObjectURL(imageFile) : item.image,
     })
 
-    let imageUrl = item.image
-    if (imageFile) imageUrl = await uploadImage(imageFile)
+    let imageBase64 = item.image
+    if (imageFile) imageBase64 = await compressImage(imageFile)
 
-    await addDoc(col, { ...item, image: imageUrl, createdAt: serverTimestamp() })
+    await addDoc(col, { ...item, image: imageBase64, createdAt: serverTimestamp() })
     cachedItems.value = cachedItems.value.filter((i) => i.id !== tempId)
   }
 
