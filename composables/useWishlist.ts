@@ -2,6 +2,7 @@ import {
   collection,
   addDoc,
   deleteDoc,
+  updateDoc,
   doc,
   onSnapshot,
   serverTimestamp,
@@ -112,5 +113,17 @@ export function useWishlist() {
     await deleteDoc(doc($db as any, 'wishlist', id))
   }
 
-  return { items: cachedItems, loading, addItem, removeItem }
+  async function updateItem(id: string, changes: Partial<Omit<WishlistItem, 'id'>>, imageFile?: File) {
+    let imageBase64 = changes.image
+    if (imageFile) imageBase64 = await compressImage(imageFile)
+
+    const updated = { ...changes, image: imageBase64 ?? '' }
+
+    // Optimistic update
+    cachedItems.value = cachedItems.value.map((i) => (i.id === id ? { ...i, ...updated } : i))
+
+    await updateDoc(doc($db as any, 'wishlist', id), updated)
+  }
+
+  return { items: cachedItems, loading, addItem, removeItem, updateItem }
 }

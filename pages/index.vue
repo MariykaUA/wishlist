@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { items, loading, addItem, removeItem } = useWishlist()
+const { items, loading, addItem, removeItem, updateItem } = useWishlist()
 
 const showForm = ref(false)
 const saving = ref(false)
@@ -14,6 +14,73 @@ const form = reactive({
   store: '',
   url: '',
 })
+
+// ── Edit ──
+const editingItem = ref<import('~/composables/useWishlist').WishlistItem | null>(null)
+const editImageFile = ref<File | null>(null)
+const editImagePreview = ref<string | null>(null)
+const editSaving = ref(false)
+
+const editForm = reactive({
+  name: '',
+  price: '',
+  currency: 'CHF',
+  description: '',
+  store: '',
+  url: '',
+})
+
+function openEdit(item: import('~/composables/useWishlist').WishlistItem) {
+  editingItem.value = item
+  Object.assign(editForm, {
+    name: item.name,
+    price: item.price,
+    currency: item.currency || 'CHF',
+    description: item.description,
+    store: item.store,
+    url: item.url,
+  })
+  editImageFile.value = null
+  editImagePreview.value = item.image || null
+}
+
+function closeEdit() {
+  editingItem.value = null
+  editImageFile.value = null
+  editImagePreview.value = null
+}
+
+function onEditImageChange(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  editImageFile.value = file
+  editImagePreview.value = URL.createObjectURL(file)
+}
+
+function removeEditImage() {
+  editImageFile.value = null
+  editImagePreview.value = null
+}
+
+async function submitEdit() {
+  if (!editingItem.value || !editForm.name || !editForm.price) return
+  editSaving.value = true
+
+  const changes = {
+    name: editForm.name,
+    price: editForm.price,
+    currency: editForm.currency,
+    description: editForm.description,
+    store: editForm.store,
+    url: editForm.url,
+    image: editImagePreview.value && !editImageFile.value ? editImagePreview.value : '',
+  }
+
+  const id = editingItem.value.id
+  closeEdit()
+  await updateItem(id, changes, editImageFile.value ?? undefined)
+  editSaving.value = false
+}
 
 function onImageChange(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
@@ -160,6 +227,7 @@ async function submitForm() {
         <div class="card__image-wrap">
           <img v-if="item.image" :src="item.image" :alt="item.name" class="card__image" />
           <div v-else class="card__image-placeholder">🎁</div>
+          <button class="card__edit" title="Edit" @click="openEdit(item)">Edit</button>
           <button class="card__delete" title="Remove" @click="removeItem(item.id)">✕</button>
         </div>
 
@@ -180,6 +248,69 @@ async function submitForm() {
       </div>
     </div>
   </div>
+
+  <!-- Edit modal -->
+  <Transition name="fade">
+    <div v-if="editingItem" class="modal-backdrop" @click.self="closeEdit">
+      <form class="modal-form" @submit.prevent="submitEdit">
+        <div class="modal-form__header">
+          <h2 class="form__title">Edit item</h2>
+          <button type="button" class="modal-form__close" @click="closeEdit">✕</button>
+        </div>
+
+        <!-- Image upload -->
+        <div class="form__upload" @click="($refs.editFileInput as HTMLInputElement).click()">
+          <img v-if="editImagePreview" :src="editImagePreview" class="form__preview" alt="preview" />
+          <div v-else class="form__upload-placeholder">
+            <span class="form__upload-icon">🖼️</span>
+            <span class="form__upload-text">Click to upload a photo</span>
+            <span class="form__upload-hint">JPG, PNG, WEBP</span>
+          </div>
+          <button v-if="editImagePreview" type="button" class="form__remove-img" @click.stop="removeEditImage">✕</button>
+        </div>
+        <input ref="editFileInput" type="file" accept="image/*" class="form__file-hidden" @change="onEditImageChange" />
+
+        <div class="form__row">
+          <div class="form__group">
+            <label class="form__label">Item name <span class="form__required">*</span></label>
+            <input v-model="editForm.name" class="form__input" required />
+          </div>
+          <div class="form__group">
+            <label class="form__label">Price <span class="form__required">*</span></label>
+            <div class="form__price-wrap">
+              <select v-model="editForm.currency" class="form__select">
+                <option>CHF</option>
+                <option>EUR</option>
+              </select>
+              <input v-model="editForm.price" class="form__input form__input--price" type="text" required />
+            </div>
+          </div>
+        </div>
+
+        <div class="form__group">
+          <label class="form__label">Description</label>
+          <textarea v-model="editForm.description" class="form__input form__textarea" rows="3" />
+        </div>
+
+        <div class="form__row">
+          <div class="form__group">
+            <label class="form__label">Store</label>
+            <input v-model="editForm.store" class="form__input" />
+          </div>
+          <div class="form__group">
+            <label class="form__label">Website URL</label>
+            <input v-model="editForm.url" class="form__input" type="url" />
+          </div>
+        </div>
+
+        <div class="form__actions">
+          <button class="form__submit" type="submit" :disabled="editSaving">
+            {{ editSaving ? 'Saving…' : 'Save changes' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </Transition>
 </template>
 
 <style scoped>
@@ -642,5 +773,96 @@ async function submitForm() {
 .btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(255, 151, 41, 0.2);
+}
+
+/* ── Card edit button ── */
+.card__edit {
+  position: absolute;
+  top: 10px;
+  right: 46px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(6px);
+  color: #1a1a2e;
+  border: 1.5px solid rgba(0, 0, 0, 0.15);
+  border-radius: 999px;
+  padding: 0 0.65rem;
+  font-family: 'Montserrat', system-ui, sans-serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s, background 0.15s;
+  white-space: nowrap;
+}
+
+.card__edit:hover {
+  background: rgba(255, 255, 255, 1);
+}
+
+.card:hover .card__edit {
+  opacity: 1;
+}
+
+/* ── Edit modal ── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+}
+
+.modal-form {
+  background: linear-gradient(135deg, #fdf4ff 0%, #eff6ff 50%, #f0fdf4 100%);
+  border-radius: 20px;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.modal-form__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-form__close {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: #888;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.modal-form__close:hover {
+  background: rgba(0, 0, 0, 0.07);
+}
+
+/* ── Fade transition ── */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
