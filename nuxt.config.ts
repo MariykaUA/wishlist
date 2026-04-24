@@ -12,6 +12,7 @@ export default defineNuxtConfig({
       firebaseStorageBucket: 'wishlist-a64f9.firebasestorage.app',
       firebaseMessagingSenderId: '581419988392',
       firebaseAppId: '1:581419988392:web:0c9e6d1ca929a5e039d99d',
+      accessCode: '2106',
     },
   },
 })

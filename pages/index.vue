@@ -1,5 +1,50 @@
 <script setup lang="ts">
 const { items, loading, addItem, removeItem, updateItem } = useWishlist()
+const { public: { accessCode } } = useRuntimeConfig()
+
+// ── Access gate ──
+const isUnlocked = ref(false)
+const showPinModal = ref(false)
+const pinInput = ref('')
+const pinError = ref(false)
+let pendingAction: (() => void) | null = null
+
+onMounted(() => {
+  isUnlocked.value = sessionStorage.getItem('wl_unlocked') === '1'
+})
+
+function requireAccess(action: () => void) {
+  if (isUnlocked.value) { action(); return }
+  pendingAction = action
+  pinInput.value = ''
+  pinError.value = false
+  showPinModal.value = true
+}
+
+function submitPin() {
+  if (pinInput.value === String(accessCode)) {
+    isUnlocked.value = true
+    sessionStorage.setItem('wl_unlocked', '1')
+    showPinModal.value = false
+    pendingAction?.()
+    pendingAction = null
+  } else {
+    pinError.value = true
+    pinInput.value = ''
+  }
+}
+
+function requireAccessAlways(action: () => void) {
+  pendingAction = action
+  pinInput.value = ''
+  pinError.value = false
+  showPinModal.value = true
+}
+
+function closePinModal() {
+  showPinModal.value = false
+  pendingAction = null
+}
 
 const showForm = ref(false)
 const saving = ref(false)
@@ -227,8 +272,8 @@ async function submitForm() {
         <div class="card__image-wrap">
           <img v-if="item.image" :src="item.image" :alt="item.name" class="card__image" />
           <div v-else class="card__image-placeholder">🎁</div>
-          <button class="card__edit" title="Edit" @click="openEdit(item)">Edit</button>
-          <button class="card__delete" title="Remove" @click="removeItem(item.id)">✕</button>
+          <button class="card__edit" title="Edit" @click="requireAccessAlways(() => openEdit(item))">Edit</button>
+          <button class="card__delete" title="Remove" @click="requireAccessAlways(() => removeItem(item.id))">✕</button>
         </div>
 
         <div class="card__body">
@@ -308,6 +353,27 @@ async function submitForm() {
             {{ editSaving ? 'Saving…' : 'Save changes' }}
           </button>
         </div>
+      </form>
+    </div>
+  </Transition>
+
+  <!-- PIN modal -->
+  <Transition name="fade">
+    <div v-if="showPinModal" class="modal-backdrop" @click.self="closePinModal">
+      <form class="pin-modal" @submit.prevent="submitPin">
+        <h2 class="pin-modal__title">Enter access code</h2>
+        <input
+          v-model="pinInput"
+          class="pin-modal__input"
+          type="password"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          placeholder="••••"
+          autofocus
+          @input="pinError = false"
+        />
+        <p v-if="pinError" class="pin-modal__error">Incorrect code, try again</p>
+        <button class="form__submit pin-modal__btn" type="submit">Unlock</button>
       </form>
     </div>
   </Transition>
@@ -853,6 +919,60 @@ async function submitForm() {
 
 .modal-form__close:hover {
   background: rgba(0, 0, 0, 0.07);
+}
+
+/* ── PIN modal ── */
+.pin-modal {
+  background: linear-gradient(135deg, #fdf4ff 0%, #eff6ff 100%);
+  border-radius: 20px;
+  padding: 2rem 1.75rem;
+  width: 100%;
+  max-width: 320px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.pin-modal__title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0;
+  text-align: center;
+}
+
+.pin-modal__input {
+  font-family: 'Montserrat', system-ui, sans-serif;
+  width: 100%;
+  padding: 0.65rem 1rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 1.4rem;
+  letter-spacing: 0.3em;
+  text-align: center;
+  color: #1a1a2e;
+  background: #fafbff;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.pin-modal__input:focus {
+  border-color: #a855f7;
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
+}
+
+.pin-modal__error {
+  font-size: 0.78rem;
+  color: #ec4899;
+  font-weight: 600;
+  margin: 0;
+}
+
+.pin-modal__btn {
+  width: 100%;
+  text-align: center;
 }
 
 /* ── Fade transition ── */
