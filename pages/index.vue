@@ -49,7 +49,7 @@ const editingItem = ref(null)
           :is-admin="isAdmin"
           @edit="(item) => editingItem = item"
           @delete="(id) => removeItem(id)"
-          @reserve="(id) => reserveItem(id)"
+          @reserve="(id, code) => reserveItem(id, code)"
           @unreserve="(id) => unreserveItem(id)"
         />
       </div>
