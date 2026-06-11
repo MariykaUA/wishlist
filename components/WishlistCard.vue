@@ -46,7 +46,7 @@ function submitUnreserve() {
 </script>
 
 <template>
-  <div class="card" :class="{ 'card--reserved': item.reserved }">
+  <div class="card" :class="{ 'card--reserved': item.reserved && !isAdmin }">
     <div class="card__image-wrap">
       <img v-if="item.image" :src="item.image" :alt="item.name" class="card__image" />
       <div v-else class="card__image-placeholder">🎁</div>
@@ -76,10 +76,7 @@ function submitUnreserve() {
         </a>
 
         <template v-if="isAdmin">
-          <span v-if="item.reserved" class="card__tag card__tag--reserved">
-            {{ item.reservedCode ? `By ${item.reservedCode}` : 'Reserved ✓' }}
-          </span>
-          <span v-else-if="item.store" class="card__store">{{ item.store }}</span>
+          <span v-if="item.store" class="card__store">{{ item.store }}</span>
         </template>
 
         <template v-else>
