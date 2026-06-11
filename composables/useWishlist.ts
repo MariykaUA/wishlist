@@ -20,6 +20,7 @@ export interface WishlistItem {
   store: string
   url: string
   reserved?: boolean
+  reservedCode?: string
 }
 
 // Module-level — persists across SPA navigations, resets on hard refresh
@@ -126,18 +127,18 @@ export function useWishlist() {
     await updateDoc(doc($db as any, 'wishlist', id), updated)
   }
 
-  async function reserveItem(id: string) {
+  async function reserveItem(id: string, code: string) {
     cachedItems.value = cachedItems.value.map((i) =>
-      i.id === id ? { ...i, reserved: true } : i
+      i.id === id ? { ...i, reserved: true, reservedCode: code } : i
     )
-    await updateDoc(doc($db as any, 'wishlist', id), { reserved: true })
+    await updateDoc(doc($db as any, 'wishlist', id), { reserved: true, reservedCode: code })
   }
 
   async function unreserveItem(id: string) {
     cachedItems.value = cachedItems.value.map((i) =>
-      i.id === id ? { ...i, reserved: false } : i
+      i.id === id ? { ...i, reserved: false, reservedCode: '' } : i
     )
-    await updateDoc(doc($db as any, 'wishlist', id), { reserved: false })
+    await updateDoc(doc($db as any, 'wishlist', id), { reserved: false, reservedCode: '' })
   }
 
   return { items: cachedItems, loading, addItem, removeItem, updateItem, reserveItem, unreserveItem }

@@ -1,9 +1,48 @@
 <script setup>
-defineProps({
+const props = defineProps({
   item: Object,
   isAdmin: Boolean,
 })
 const emit = defineEmits(['edit', 'delete', 'reserve', 'unreserve'])
+
+const showReserveModal = ref(false)
+const showUnreserveModal = ref(false)
+const codeInput = ref('')
+const codeError = ref(false)
+
+function openReserve() {
+  codeInput.value = ''
+  showReserveModal.value = true
+}
+
+function openUnreserve() {
+  codeInput.value = ''
+  codeError.value = false
+  showUnreserveModal.value = true
+}
+
+function closeModal() {
+  showReserveModal.value = false
+  showUnreserveModal.value = false
+  codeInput.value = ''
+  codeError.value = false
+}
+
+function submitReserve() {
+  if (!codeInput.value.trim()) return
+  emit('reserve', props.item.id, codeInput.value.trim())
+  closeModal()
+}
+
+function submitUnreserve() {
+  if (codeInput.value.trim() === props.item.reservedCode) {
+    emit('unreserve', props.item.id)
+    closeModal()
+  } else {
+    codeError.value = true
+    codeInput.value = ''
+  }
+}
 </script>
 
 <template>
@@ -18,7 +57,7 @@ const emit = defineEmits(['edit', 'delete', 'reserve', 'unreserve'])
       </template>
 
       <div v-if="!isAdmin && item.reserved" class="card__reserved-overlay">
-        <button class="card__unreserve-btn" @click="emit('unreserve', item.id)">
+        <button class="card__unreserve-btn" @click="openUnreserve">
           × Unreserve
         </button>
       </div>
@@ -37,16 +76,14 @@ const emit = defineEmits(['edit', 'delete', 'reserve', 'unreserve'])
         </a>
 
         <template v-if="isAdmin">
-          <span v-if="item.reserved" class="card__tag card__tag--reserved">Reserved ✓</span>
+          <span v-if="item.reserved" class="card__tag card__tag--reserved">
+            {{ item.reservedCode ? `By ${item.reservedCode}` : 'Reserved ✓' }}
+          </span>
           <span v-else-if="item.store" class="card__store">{{ item.store }}</span>
         </template>
 
         <template v-else>
-          <button
-            v-if="!item.reserved"
-            class="btn btn--reserve"
-            @click="emit('reserve', item.id)"
-          >
+          <button v-if="!item.reserved" class="btn btn--reserve" @click="openReserve">
             Reserve
           </button>
           <span v-else class="card__tag card__tag--taken">Reserved 💜</span>
@@ -54,6 +91,51 @@ const emit = defineEmits(['edit', 'delete', 'reserve', 'unreserve'])
       </div>
     </div>
   </div>
+
+  <!-- Reserve modal -->
+  <Transition name="modal-fade">
+    <div v-if="showReserveModal" class="modal-backdrop" @click.self="closeModal">
+      <div class="modal">
+        <h3 class="modal__title">Reserve this item</h3>
+        <p class="modal__desc">Enter your name or a secret code — you'll need it to unreserve later</p>
+        <input
+          v-model="codeInput"
+          class="modal__input"
+          type="text"
+          placeholder="Your name or code"
+          autofocus
+          @keyup.enter="submitReserve"
+        />
+        <div class="modal__actions">
+          <button class="modal__btn modal__btn--cancel" @click="closeModal">Cancel</button>
+          <button class="modal__btn modal__btn--submit" @click="submitReserve">Reserve 💜</button>
+        </div>
+      </div>
+    </div>
+  </Transition>
+
+  <!-- Unreserve modal -->
+  <Transition name="modal-fade">
+    <div v-if="showUnreserveModal" class="modal-backdrop" @click.self="closeModal">
+      <div class="modal">
+        <h3 class="modal__title">Unreserve this item</h3>
+        <p class="modal__desc">Enter your code to confirm</p>
+        <input
+          v-model="codeInput"
+          class="modal__input"
+          type="text"
+          placeholder="Your name or code"
+          autofocus
+          @keyup.enter="submitUnreserve"
+        />
+        <p v-if="codeError" class="modal__error">Wrong code, try again</p>
+        <div class="modal__actions">
+          <button class="modal__btn modal__btn--cancel" @click="closeModal">Cancel</button>
+          <button class="modal__btn modal__btn--submit modal__btn--danger" @click="submitUnreserve">Unreserve</button>
+        </div>
+      </div>
+    </div>
+  </Transition>
 </template>
 
 <style scoped>
@@ -264,7 +346,6 @@ const emit = defineEmits(['edit', 'delete', 'reserve', 'unreserve'])
   box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4);
 }
 
-
 .card__reserved-overlay {
   position: absolute;
   inset: 0;
@@ -310,5 +391,124 @@ const emit = defineEmits(['edit', 'delete', 'reserve', 'unreserve'])
 
 .card--reserved:hover .btn {
   transform: none;
+}
+
+/* Modals */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 1rem;
+}
+
+.modal {
+  font-family: 'Montserrat', system-ui, sans-serif;
+  background: linear-gradient(135deg, #fdf4ff 0%, #eff6ff 100%);
+  border-radius: 20px;
+  padding: 2rem 1.75rem;
+  width: 100%;
+  max-width: 340px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.modal__title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0;
+}
+
+.modal__desc {
+  font-size: 0.78rem;
+  color: #888;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.modal__input {
+  font-family: 'Montserrat', system-ui, sans-serif;
+  width: 100%;
+  padding: 0.65rem 1rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  color: #1a1a2e;
+  background: #fafbff;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.modal__input:focus {
+  border-color: #a855f7;
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
+}
+
+.modal__error {
+  font-size: 0.75rem;
+  color: #ec4899;
+  font-weight: 600;
+  margin: 0;
+}
+
+.modal__actions {
+  display: flex;
+  gap: 0.65rem;
+  justify-content: flex-end;
+}
+
+.modal__btn {
+  font-family: 'Montserrat', system-ui, sans-serif;
+  border: none;
+  border-radius: 999px;
+  padding: 0.55rem 1.25rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.modal__btn--cancel {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.modal__btn--cancel:hover {
+  background: #e2e8f0;
+}
+
+.modal__btn--submit {
+  background: linear-gradient(135deg, #a855f7, #6366f1);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(168, 85, 247, 0.3);
+}
+
+.modal__btn--submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4);
+}
+
+.modal__btn--danger {
+  background: linear-gradient(135deg, #f97316, #dc2626);
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.3);
+}
+
+.modal__btn--danger:hover {
+  box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
 }
 </style>
