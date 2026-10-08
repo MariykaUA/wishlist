@@ -14,6 +14,7 @@ const editForm = reactive({
   description: '',
   store: '',
   url: '',
+  section: 'gift',
 })
 
 watch(() => props.item, (item) => {
@@ -25,6 +26,7 @@ watch(() => props.item, (item) => {
     description: item.description,
     store: item.store,
     url: item.url,
+    section: getSection(item),
   })
   editImageFile.value = null
   editImagePreview.value = item.image || null
@@ -52,6 +54,7 @@ function submit() {
     description: editForm.description,
     store: editForm.store,
     url: editForm.url,
+    section: editForm.section,
     image: editImagePreview.value && !editImageFile.value ? editImagePreview.value : '',
   }
 
@@ -82,6 +85,8 @@ function submit() {
           <button v-if="editImagePreview" type="button" class="form__remove-img" @click.stop="removeImage">✕</button>
         </div>
         <input ref="editFileInput" type="file" accept="image/*" class="form__file-hidden" @change="onImageChange" />
+
+        <SectionPicker v-model="editForm.section" />
 
         <div class="form__row">
           <div class="form__group">

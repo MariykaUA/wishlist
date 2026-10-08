@@ -1,4 +1,8 @@
 <script setup>
+const props = defineProps({
+  // Section that is open on the page — used as the default for new items
+  section: { type: String, default: 'gift' },
+})
 const emit = defineEmits(['close'])
 const { addItem } = useWishlist()
 
@@ -13,6 +17,7 @@ const form = reactive({
   description: '',
   store: '',
   url: '',
+  section: props.section,
 })
 
 function onImageChange(e) {
@@ -38,10 +43,11 @@ function submit() {
     image: '',
     store: form.store,
     url: form.url,
+    section: form.section,
   }
   const file = imageFile.value ?? undefined
 
-  Object.assign(form, { name: '', price: '', currency: 'CHF', description: '', store: '', url: '' })
+  Object.assign(form, { name: '', price: '', currency: 'CHF', description: '', store: '', url: '', section: props.section })
   imageFile.value = null
   imagePreview.value = null
   emit('close')
@@ -64,6 +70,8 @@ function submit() {
       <button v-if="imagePreview" type="button" class="form__remove-img" @click.stop="removeImage">✕</button>
     </div>
     <input ref="fileInput" type="file" accept="image/*" class="form__file-hidden" @change="onImageChange" />
+
+    <SectionPicker v-model="form.section" />
 
     <div class="form__row">
       <div class="form__group">
