@@ -19,8 +19,24 @@ export interface WishlistItem {
   image: string
   store: string
   url: string
+  section?: SectionId
   reserved?: boolean
   reservedCode?: string
+}
+
+// Two sections of the list:
+// 'gift' — things other people could give me
+// 'self' — my own wants (things I plan to get myself)
+export type SectionId = 'gift' | 'self'
+
+export const SECTIONS: { id: SectionId; label: string; icon: string }[] = [
+  { id: 'gift', label: 'What you could gift me', icon: '🎁' },
+  { id: 'self', label: 'My own wants', icon: '✨' },
+]
+
+// Items created before sections existed count as gifts
+export function getSection(item: WishlistItem): SectionId {
+  return item.section || 'gift'
 }
 
 // Module-level — persists across SPA navigations, resets on hard refresh

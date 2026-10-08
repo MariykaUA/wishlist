@@ -5,6 +5,9 @@ const props = defineProps({
 })
 const emit = defineEmits(['edit', 'delete', 'reserve', 'unreserve'])
 
+// Only gift items can be reserved — "My own wants" are bought by me
+const canReserve = computed(() => getSection(props.item) === 'gift')
+
 const showReserveModal = ref(false)
 const showUnreserveModal = ref(false)
 const codeInput = ref('')
@@ -46,7 +49,7 @@ function submitUnreserve() {
 </script>
 
 <template>
-  <div class="card" :class="{ 'card--reserved': item.reserved && !isAdmin }">
+  <div class="card" :class="{ 'card--reserved': item.reserved && !isAdmin && canReserve }">
     <div class="card__image-wrap">
       <img v-if="item.image" :src="item.image" :alt="item.name" class="card__image" />
       <div v-else class="card__image-placeholder">🎁</div>
@@ -56,7 +59,7 @@ function submitUnreserve() {
         <button class="card__delete" title="Remove" @click="emit('delete', item.id)">✕</button>
       </template>
 
-      <div v-if="!isAdmin && item.reserved" class="card__reserved-overlay">
+      <div v-if="!isAdmin && item.reserved && canReserve" class="card__reserved-overlay">
         <button class="card__unreserve-btn" @click="openUnreserve">
           × Unreserve
         </button>
@@ -79,7 +82,7 @@ function submitUnreserve() {
           <span v-if="item.store" class="card__store">{{ item.store }}</span>
         </template>
 
-        <template v-else>
+        <template v-else-if="canReserve">
           <button v-if="!item.reserved" class="btn btn--reserve" @click="openReserve">
             Reserve
           </button>
